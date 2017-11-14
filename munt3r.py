@@ -76,8 +76,8 @@ def connect(url, cookie):
 	ws = yield from websockets.connect(url, extra_headers=headers, compression=None)
 	verbose_msg("sending CONNECT")
 	send_request(ws, "CONNECT", {"accept-version":"1.1,1.2","heart-beat":"0,0"}, expect_response=True)
-	verbose_msg("subscribing to {}..".format(topic))
 	if topic:
+		verbose_msg("subscribing to {}..".format(topic))
 		subscribe(ws, subid="sub0", dest=topic)
 	verbose_msg("OK")
 	return ws

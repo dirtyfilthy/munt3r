@@ -2,7 +2,7 @@
  
 ## What does this do?
  
-munt3r converts HTTP requests you send to its built in HTTP server into STOMP-over-websocket requests which are forwarded upstream, and then converts the websocket response back into HTTP on the way return trip. 
+munt3r converts HTTP requests you send to its built in HTTP server into STOMP-over-websocket requests which are forwarded upstream, and then converts the websocket response back into HTTP on the return trip. 
  
 ## What's STOMP?
  
