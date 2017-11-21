@@ -14,6 +14,7 @@ host    = None
 port    = DEFAULT_PORT
 verbose = False
 topic   = None
+timeout = 2
 
 
 def verbose_msg(msg):
@@ -42,6 +43,17 @@ def build_request(method, headers, body):
 	req.append(0x00)
 	return bytes(req)
 
+@asyncio.coroutine
+def recv_with_timeout(websocket, timeout=2, raw_body=False):
+	resp = None
+	recv_gen = websocket.recv()
+	try:
+		resp = yield from asyncio.wait_for(recv_gen, timeout=timeout)
+	except asyncio.TimeoutError:
+		return None
+	if not raw_body:
+		resp = parse_body(resp)
+	return resp
 
 def parse_body(raw_resp):
 	body_start = raw_resp.find("\n\n")+2
@@ -50,14 +62,16 @@ def parse_body(raw_resp):
 	return body
 
 
+
+
+
 @asyncio.coroutine
 def send_request(websocket, method, headers={}, body="", expect_response=False, raw_body=False):
+	global timeout
 	req = build_request(method, headers, body)
 	yield from websocket.send(req)
 	if expect_response:
-		resp = yield from websocket.recv()
-		if  not raw_body:
-			resp = parse_body(resp)
+		resp = yield from recv_with_timeout(websocket, timeout=timeout, raw_body=raw_body)
 		return resp
 	return
 
@@ -113,8 +127,10 @@ def handler(req):
 	data = yield from req.read()
 	print("handling request {}".format(path))
 	resp = yield from request(url, cookie, path, data)
-
-	return web.Response(body=resp, content_type="text/json")
+	if resp is not None:
+		return web.Response(body=resp, content_type="text/json")
+	else:
+		return web.Response(body="timeout", content_type="text/html", status=404)
 
 @asyncio.coroutine
 def main_loop(loop):
@@ -139,12 +155,14 @@ def parse_args():
 	global verbose_msg
 	global url
 	global topic
+	global timeout
 	parser = argparse.ArgumentParser(description="HTTP to STOMP-over-websocket shim, 2017 Caleb Anderson")
 	parser.add_argument('url', metavar='URL', type=str, nargs=1, help='web socket URL for initial handshake i.e. ws://server:1234/socket')
 	parser.add_argument("--port","-p", dest="port", type=int, default=DEFAULT_PORT, help="start webserver on port (default {})".format(DEFAULT_PORT))
 	parser.add_argument("--cookie","-c", dest="cookie", type=str, default=None, help="cookie for initial websocket handshake")
 	parser.add_argument("--host","-H", dest="host", type=str, default=None, help="vhost for Host header")
 	parser.add_argument("--subscribe","-s", dest="sub", type=str, default=None, help="subscribe to topic on connect")
+	parser.add_argument("--timeout","-t", dest="timeout", type=int, default=2,  help="response timeout in seconds")
 	parser.add_argument("--verbose","-v", action="store_true")
 	args = parser.parse_args()
 	cookie  = args.cookie
@@ -153,6 +171,7 @@ def parse_args():
 	verbose = args.verbose
 	host    = args.host
 	topic   = args.sub
+	timeout = args.timeout
 	start()
 
 if __name__=="__main__":
