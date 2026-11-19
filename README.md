@@ -1,4 +1,6 @@
 # munt3r.py: a HTTP to STOMP-over-websocket shim for pentesters
+
+**Status:** not actively developed. I'm not fixing bugs or adding features, but I'll look at pull requests when I can. Forks welcome.
  
 ## What does this do?
  
